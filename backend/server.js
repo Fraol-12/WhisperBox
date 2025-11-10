@@ -2,6 +2,7 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 require('dotenv').config();
+const path = require('path');
 
 const app = express();
 
@@ -11,6 +12,9 @@ app.set('trust proxy', true);
 // Middleware
 app.use(cors());
 app.use(express.json());
+
+// Static uploads serving
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Routes
 app.use('/api/complaints', require('./routes/complaints'));

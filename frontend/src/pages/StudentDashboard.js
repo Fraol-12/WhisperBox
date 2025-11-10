@@ -2,6 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { getComplaints, likeComplaint } from '../utils/api';
 import { showNotification } from '../utils/notifications';
+import Button from '../components/ui/Button';
+import Card from '../components/ui/Card';
+import Badge from '../components/ui/Badge';
+import Select from '../components/ui/Select';
+import Input from '../components/ui/Input';
+import Spinner from '../components/ui/Spinner';
 
 const StudentDashboard = () => {
   const navigate = useNavigate();
@@ -14,9 +20,10 @@ const StudentDashboard = () => {
   const [likedComplaints, setLikedComplaints] = useState(new Set());
 
   const departments = ['Café', 'IT', 'Library', 'Dorm', 'Registrar'];
+  const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+  const FILE_BASE = API_BASE.replace(/\/api$/, '');
 
   useEffect(() => {
-    // Load liked complaints from localStorage
     const savedLikes = localStorage.getItem('likedComplaints');
     if (savedLikes) {
       setLikedComplaints(new Set(JSON.parse(savedLikes)));
@@ -56,7 +63,6 @@ const StudentDashboard = () => {
       setLikedComplaints(newLiked);
       localStorage.setItem('likedComplaints', JSON.stringify([...newLiked]));
       
-      // Update the complaint in the list
       setComplaints(complaints.map(c => 
         c._id === complaintId ? { ...c, likes: c.likes + 1 } : c
       ));
@@ -67,153 +73,206 @@ const StudentDashboard = () => {
     }
   };
 
-  const getStatusColor = (status) => {
+  const getStatusBadge = (status) => {
     switch (status) {
       case 'Resolved':
-        return 'bg-green-100 text-green-800';
+        return <Badge variant="success">{status}</Badge>;
       case 'In Progress':
-        return 'bg-yellow-100 text-yellow-800';
+        return <Badge variant="warning">{status}</Badge>;
       default:
-        return 'bg-gray-100 text-gray-800';
+        return <Badge variant="default">{status}</Badge>;
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-12 px-4">
+    <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-indigo-50 py-8 px-4 animate-fade-in">
       <div className="max-w-6xl mx-auto">
-        <div className="bg-white rounded-2xl shadow-xl p-8">
-          <div className="mb-6">
+        <Card className="animate-fade-in-up" padding="lg" hover={false}>
+          {/* Header */}
+          <div className="mb-8">
             <button
               onClick={() => navigate('/')}
-              className="text-blue-600 hover:text-blue-800 font-medium mb-4 inline-flex items-center"
+              className="text-primary-600 hover:text-primary-700 font-medium mb-6 inline-flex items-center group transition-colors"
+              aria-label="Back to home"
             >
-              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-5 h-5 mr-2 group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
               </svg>
               Back to Home
             </button>
-            <h1 className="text-3xl font-bold text-gray-800 mb-2">
+            <h1 className="text-3xl md:text-4xl font-bold text-secondary-900 mb-2">
               Student Dashboard
             </h1>
-            <p className="text-gray-600">
-              View and interact with complaints
+            <p className="text-secondary-600">
+              View and interact with complaints from your campus
             </p>
           </div>
 
-          <div className="grid md:grid-cols-2 gap-4 mb-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Select Department
-              </label>
-              <select
+          {/* Filters */}
+          <div className="mb-8 space-y-4">
+            <div className="grid sm:grid-cols-2 gap-4">
+              <Select
+                label="Select Department"
+                id="department"
                 value={department}
                 onChange={(e) => setDepartment(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">Select department</option>
-                {departments.map((dept) => (
-                  <option key={dept} value={dept}>
-                    {dept}
-                  </option>
-                ))}
-              </select>
-            </div>
+                options={departments.map(dept => ({ value: dept, label: dept }))}
+                placeholder="Select department"
+              />
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Sort By
-              </label>
-              <select
+              <Select
+                label="Sort By"
+                id="sortBy"
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="likes">Most Liked</option>
-                <option value="date">Latest First</option>
-              </select>
+                options={[
+                  { value: 'likes', label: 'Most Liked' },
+                  { value: 'date', label: 'Latest First' },
+                ]}
+              />
             </div>
-          </div>
 
-          <div className="mb-6">
-            <input
+            <Input
+              label="Search Complaints"
+              id="search"
               type="text"
-              placeholder="Search complaints..."
+              placeholder="Search by keyword..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
             />
           </div>
 
+          {/* Content */}
           {!department ? (
-            <div className="text-center py-12 text-gray-500">
-              Please select a department to view complaints
+            <div className="text-center py-16">
+              <div className="inline-flex items-center justify-center w-16 h-16 bg-secondary-100 rounded-full mb-4">
+                <svg className="w-8 h-8 text-secondary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+              </div>
+              <p className="text-secondary-500 text-lg">Please select a department to view complaints</p>
             </div>
           ) : loading ? (
-            <div className="text-center py-12">
-              <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+            <div className="py-16">
+              <Spinner size="lg" className="mx-auto" />
             </div>
           ) : complaints.length === 0 ? (
-            <div className="text-center py-12 text-gray-500">
-              No complaints found for this department
+            <div className="text-center py-16">
+              <div className="inline-flex items-center justify-center w-16 h-16 bg-secondary-100 rounded-full mb-4">
+                <svg className="w-8 h-8 text-secondary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                </svg>
+              </div>
+              <p className="text-secondary-500 text-lg">No complaints found for this department</p>
             </div>
           ) : (
-            <div className="space-y-4">
-              {complaints.map((complaint) => (
-                <div
+            <div className="space-y-6">
+              {complaints.map((complaint, index) => (
+                <Card
                   key={complaint._id}
-                  className="border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow"
+                  className="animate-fade-in-up"
+                  style={{ animationDelay: `${index * 0.1}s` }}
+                  hover
+                  padding="md"
                 >
-                  <div className="flex justify-between items-start mb-4">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
-                        {complaint.ticketId && (
-                          <span className="text-sm font-mono text-blue-600 bg-blue-50 px-2 py-1 rounded">
-                            {complaint.ticketId}
-                          </span>
-                        )}
-                        <span className={`text-xs font-semibold px-2 py-1 rounded ${getStatusColor(complaint.status)}`}>
-                          {complaint.status}
-                        </span>
-                      </div>
-                      <p className="text-gray-700 mb-3 whitespace-pre-wrap">
-                        {complaint.message}
-                      </p>
-                      {complaint.reply && (
-                        <div className="mt-3 p-3 bg-blue-50 border-l-4 border-blue-500 rounded">
-                          <p className="text-sm font-semibold text-blue-800 mb-1">Admin Reply:</p>
-                          <p className="text-sm text-blue-700">{complaint.reply}</p>
-                        </div>
+                  <div className="space-y-4">
+                    {/* Header */}
+                    <div className="flex flex-wrap items-center gap-3">
+                      {complaint.ticketId && (
+                        <Badge variant="primary" size="md" className="font-mono">
+                          {complaint.ticketId}
+                        </Badge>
                       )}
+                      {getStatusBadge(complaint.status)}
+                      <span className="text-sm text-secondary-500 flex items-center gap-1">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                        {new Date(complaint.createdAt).toLocaleDateString('en-US', { 
+                          year: 'numeric', 
+                          month: 'short', 
+                          day: 'numeric' 
+                        })}
+                      </span>
+                    </div>
+
+                    {/* Message */}
+                    <p className="text-secondary-700 leading-relaxed whitespace-pre-wrap">
+                      {complaint.message}
+                    </p>
+
+                    {/* Photos */}
+                    {Array.isArray(complaint.photos) && complaint.photos.length > 0 && (
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                        {complaint.photos.map((photo, idx) => (
+                          <a
+                            key={idx}
+                            href={`${FILE_BASE}${photo}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="group relative block overflow-hidden rounded-lg border-2 border-secondary-200 hover:border-primary-400 transition-colors"
+                          >
+                            <img
+                              src={`${FILE_BASE}${photo}`}
+                              alt={`Complaint photo ${idx + 1}`}
+                              className="w-full h-32 object-cover group-hover:scale-105 transition-transform duration-300"
+                              loading="lazy"
+                            />
+                            <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 transition-opacity flex items-center justify-center">
+                              <svg className="w-6 h-6 text-white opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                              </svg>
+                            </div>
+                          </a>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Admin Reply */}
+                    {complaint.reply && (
+                      <div className="mt-4 p-4 bg-green-50 border-l-4 border-green-500 rounded-r-lg">
+                        <p className="text-sm font-semibold text-green-800 mb-2 flex items-center gap-2">
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          Admin Reply
+                        </p>
+                        <p className="text-sm text-green-700 leading-relaxed">{complaint.reply}</p>
+                      </div>
+                    )}
+
+                    {/* Footer */}
+                    <div className="flex items-center justify-between pt-4 border-t border-secondary-200">
+                      <div className="text-sm text-secondary-500">
+                        {complaint.likes} {complaint.likes === 1 ? 'Like' : 'Likes'}
+                      </div>
+                      <Button
+                        onClick={() => handleLike(complaint._id)}
+                        disabled={likedComplaints.has(complaint._id)}
+                        variant={likedComplaints.has(complaint._id) ? 'ghost' : 'primary'}
+                        size="sm"
+                        className="gap-2"
+                      >
+                        <svg 
+                          className={`w-5 h-5 ${likedComplaints.has(complaint._id) ? 'fill-red-500 text-red-500' : ''}`}
+                          fill={likedComplaints.has(complaint._id) ? 'currentColor' : 'none'}
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                        </svg>
+                        {likedComplaints.has(complaint._id) ? 'Liked' : 'Like'}
+                      </Button>
                     </div>
                   </div>
-                  <div className="flex justify-between items-center">
-                    <div className="text-sm text-gray-500">
-                      {new Date(complaint.createdAt).toLocaleDateString()}
-                    </div>
-                    <button
-                      onClick={() => handleLike(complaint._id)}
-                      disabled={likedComplaints.has(complaint._id)}
-                      className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition ${
-                        likedComplaints.has(complaint._id)
-                          ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                          : 'bg-blue-600 hover:bg-blue-700 text-white'
-                      }`}
-                    >
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-                      </svg>
-                      {complaint.likes} {complaint.likes === 1 ? 'Like' : 'Likes'}
-                    </button>
-                  </div>
-                </div>
+                </Card>
               ))}
             </div>
           )}
-        </div>
+        </Card>
       </div>
     </div>
   );
 };
 
 export default StudentDashboard;
-

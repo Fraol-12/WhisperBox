@@ -11,6 +11,10 @@ const complaintSchema = new mongoose.Schema({
     required: true,
     trim: true
   },
+  photos: {
+    type: [String],
+    default: []
+  },
   likes: {
     type: Number,
     default: 0

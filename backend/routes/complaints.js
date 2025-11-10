@@ -5,9 +5,37 @@ const Like = require('../models/Like');
 const generateTicketId = require('../utils/generateTicketId');
 const getUserIdentifier = require('../utils/getUserIdentifier');
 const { sendComplaintNotification } = require('../utils/emailService');
+const multer = require('multer');
+const fs = require('fs');
+const path = require('path');
+
+// Ensure upload directory exists
+const uploadDir = path.join(__dirname, '..', 'uploads', 'complaints');
+fs.mkdirSync(uploadDir, { recursive: true });
+
+const storage = multer.diskStorage({
+  destination: (_req, _file, cb) => cb(null, uploadDir),
+  filename: (_req, file, cb) => {
+    const unique = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
+    const ext = path.extname(file.originalname) || '';
+    cb(null, `complaint-${unique}${ext}`);
+  }
+});
+
+const fileFilter = (_req, file, cb) => {
+  const allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+  if (allowed.includes(file.mimetype)) cb(null, true);
+  else cb(new Error('Only image files are allowed'), false);
+};
+
+const upload = multer({
+  storage,
+  fileFilter,
+  limits: { fileSize: 5 * 1024 * 1024, files: 4 }
+});
 
 // POST /api/complaints - Create a new complaint
-router.post('/', async (req, res) => {
+router.post('/', upload.array('photos', 4), async (req, res) => {
   try {
     const { department, message } = req.body;
 
@@ -30,10 +58,15 @@ router.post('/', async (req, res) => {
       }
     }
 
+    const photos = Array.isArray(req.files)
+      ? req.files.map(f => `/uploads/complaints/${path.basename(f.path)}`)
+      : [];
+
     const complaint = new Complaint({
       department,
       message: message.trim(),
-      ticketId
+      ticketId,
+      photos
     });
 
     await complaint.save();
@@ -48,6 +81,9 @@ router.post('/', async (req, res) => {
     });
   } catch (error) {
     console.error('Error creating complaint:', error);
+    if (error.message && error.message.includes('image files')) {
+      return res.status(400).json({ error: error.message });
+    }
     res.status(500).json({ error: 'Server error' });
   }
 });

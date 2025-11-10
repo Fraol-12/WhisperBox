@@ -4,9 +4,6 @@ const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api
 
 const api = axios.create({
   baseURL: API_BASE_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
 });
 
 // Generate or retrieve user ID from localStorage
@@ -44,8 +41,14 @@ if (token) {
 }
 
 // Student API calls
-export const submitComplaint = (department, message) => {
-  return api.post('/complaints', { department, message });
+export const submitComplaint = (department, message, photos = []) => {
+  const form = new FormData();
+  form.append('department', department);
+  form.append('message', message);
+  photos.forEach((file) => form.append('photos', file));
+  return api.post('/complaints', form, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  });
 };
 
 export const getComplaints = (department, sortBy = 'likes', search = '') => {
