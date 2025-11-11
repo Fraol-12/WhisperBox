@@ -22,7 +22,7 @@ const AuthChoice = () => {
 
             <h1 className="text-3xl md:text-4xl font-extrabold text-secondary-900 leading-tight">WhisperBox</h1>
             <p className="mt-2 text-sm text-secondary-600 max-w-sm">
-              Submit and manage campus complaints with confidence. Choose how you'd like to continue.
+              Welcome to the Campus Anonymous Complaint Portal
             </p>
           </div>
 

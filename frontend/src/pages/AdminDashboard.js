@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   getAdminComplaints,
@@ -38,14 +38,9 @@ const AdminDashboard = () => {
     setAdmin(JSON.parse(adminData));
   }, [navigate]);
 
-  useEffect(() => {
-    if (admin) {
-      fetchComplaints();
-      fetchStats();
-    }
-  }, [admin, sortBy, search]);
-
-  const fetchComplaints = async () => {
+  // Fetch complaints and stats when admin is available or when filters change.
+  // Wrap fetch functions with useCallback so they can be safely added to the effect deps.
+  const fetchComplaints = useCallback(async () => {
     setLoading(true);
     try {
       const response = await getAdminComplaints(sortBy, search);
@@ -60,16 +55,25 @@ const AdminDashboard = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [sortBy, search, navigate]);
 
-  const fetchStats = async () => {
+  const fetchStats = useCallback(async () => {
     try {
       const response = await getAdminStats();
       setStats(response.data);
     } catch (error) {
       console.error('Failed to load stats:', error);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    if (admin) {
+      fetchComplaints();
+      fetchStats();
+    }
+  }, [admin, fetchComplaints, fetchStats]);
+
+  // NOTE: fetchComplaints and fetchStats are defined above using useCallback
 
   const handleStatusUpdate = async (complaintId, newStatus) => {
     try {
@@ -297,12 +301,12 @@ const AdminDashboard = () => {
                             rel="noreferrer"
                             className="group relative block overflow-hidden rounded-lg border-2 border-secondary-200 hover:border-primary-400 transition-colors"
                           >
-                            <img
-                              src={`${FILE_BASE}${photo}`}
-                              alt={`Complaint photo ${idx + 1}`}
-                              className="w-full h-32 object-cover group-hover:scale-105 transition-transform duration-300"
-                              loading="lazy"
-                            />
+                                <img
+                                  src={`${FILE_BASE}${photo}`}
+                                  alt={`Evidence ${idx + 1}`}
+                                  className="w-full h-32 object-cover group-hover:scale-105 transition-transform duration-300"
+                                  loading="lazy"
+                                />
                             <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 transition-opacity flex items-center justify-center">
                               <svg className="w-6 h-6 text-white opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
